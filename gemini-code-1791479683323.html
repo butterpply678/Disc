@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Webhook Sender</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #1e1f22;
+      color: #f2f3f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: #2b2d31;
+      width: 100%;
+      max-width: 540px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #5865f2;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: #b5bac1;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #1e1f22;
+      background-color: #1e1f22;
+      color: #f2f3f5;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #5865f2;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #5865f2;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background-color: #4752c4;
+    }
+
+    button:active {
+      transform: scale(0.99);
+    }
+
+    button:disabled {
+      background-color: #4e5058;
+      cursor: not-allowed;
+    }
+
+    .status-msg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status-msg.success {
+      display: block;
+      background-color: #232428;
+      color: #2dc770;
+      border: 1px solid #2dc770;
+    }
+
+    .status-msg.error {
+      display: block;
+      background-color: #232428;
+      color: #f23f43;
+      border: 1px solid #f23f43;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Discord Webhook Sender</h1>
+
+    <div class="form-group">
+      <label for="webhookUrl">Webhook URL</label>
+      <input 
+        type="url" 
+        id="webhookUrl" 
+        value="https://discord.com/api/webhooks/1538910490082812075/G9ZGWivzowG5LbWbShrv7CAeV_NIfYKzRDGjBBEUihXimBSchH9C068558jF4CdB0CSf" 
+        placeholder="https://discord.com/api/webhooks/..."
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="username">Custom Bot Name (Optional)</label>
+      <input type="text" id="username" placeholder="e.g. System Bot">
+    </div>
+
+    <div class="form-group">
+      <label for="avatarUrl">Avatar Image URL (Optional)</label>
+      <input type="url" id="avatarUrl" placeholder="https://example.com/avatar.png">
+    </div>
+
+    <div class="form-group">
+      <label for="messageContent">Message Content *</label>
+      <textarea id="messageContent" placeholder="Type your message here..."></textarea>
+    </div>
+
+    <button id="sendBtn" onclick="sendMessage()">Send Message</button>
+
+    <div id="status" class="status-msg"></div>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const webhookUrl = document.getElementById('webhookUrl').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const avatarUrl = document.getElementById('avatarUrl').value.trim();
+      const content = document.getElementById('messageContent').value.trim();
+      const statusDiv = document.getElementById('status');
+      const sendBtn = document.getElementById('sendBtn');
+
+      // Reset status
+      statusDiv.className = 'status-msg';
+      statusDiv.style.display = 'none';
+
+      if (!webhookUrl) {
+        showStatus('Please enter a valid Webhook URL.', 'error');
+        return;
+      }
+
+      if (!content) {
+        showStatus('Please enter a message to send.', 'error');
+        return;
+      }
+
+      // Build payload
+      const payload = { content: content };
+      if (username) payload.username = username;
+      if (avatarUrl) payload.avatar_url = avatarUrl;
+
+      sendBtn.disabled = true;
+      sendBtn.innerText = 'Sending...';
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok || response.status === 204) {
+          showStatus('Message sent successfully!', 'success');
+          document.getElementById('messageContent').value = '';
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          showStatus(`Failed to send (HTTP ${response.status}): ${errData.message || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showStatus('Network error or CORS restriction. Check your browser console.', 'error');
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerText = 'Send Message';
+      }
+    }
+
+    function showStatus(msg, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = msg;
+      statusDiv.className = `status-msg ${type}`;
+    }
+  </script>
+
+</body>
+</html>
